@@ -6,7 +6,13 @@ ORG    100h
  VAR1 DB 7
  VAR2 DB ?
  WEEK DW 0
+
+ AM DW 0
+
  msg1   DB  'Enter the number of the day of the week', 13, 10 , 13, 10 , '1 for Saturday', 13, 10 , '2 for Sunday', 13, 10 , '3 for Monday', 13, 10 , '4 for Tuesday', 13, 10 , '5 for Wednesday', 13, 10 , '6 for Thursday', 13, 10, '7 for Friday', 13, 10, 0
+
+ AMMSG   DB  13, 10, 'Is it AM or PM? Use 1 for AM, 0 for PM', 13, 10 , 0
+
 
 
  DAY DW 0
@@ -22,7 +28,12 @@ ORG    100h
  SECOND DW 0
  SECMSG   DB  13,10, 'Enter the seconds', 13, 10 , 0
  DASH   DB  '  ',  0
+ DSp   DB  ' ',  0
  YDASH   DB  '    ',  0
+
+
+AMT    DB  'AM',  0
+PMT    DB  'PM',  0
 
 
  DAY_1 DB 'Sat'    ,0
@@ -84,6 +95,14 @@ ORG    100h
     CALL   scan_num
     MOV MINUTE, CX
 
+
+    LEA    SI, AMMSG
+    CALL   print_string
+    CALL   scan_num
+    MOV AM, CX
+
+
+
     ;; LEA    SI, SECMSG
     ;; CALL   print_string
     ;; CALL   scan_num
@@ -98,58 +117,63 @@ ORG    100h
     ;; print
 
     ;; hours
-    GOTOXY 2, 20
+    GOTOXY 2, 21
     MOV AX, HOUR
     CALL PRINT_NUM
 
     ;; symbol
-    GOTOXY 5, 20
+    GOTOXY 5, 21
     mov dl,':'
     mov ah,2
     int 21h
 
     ;; mintues
-    GOTOXY 8, 20
+    GOTOXY 8, 21
     MOV AX, MINUTE
     CALL PRINT_NUM
 
     ;; symbol
-    GOTOXY 11, 20
+    GOTOXY 11, 21
     mov dl,':'
     mov ah,2
     int 21h
 
     ;; seconds
-    GOTOXY 14, 20
+    GOTOXY 14, 21
     MOV AX, SECOND
     CALL PRINT_NUM
 
 
+    GOTOXY 17, 21
+    CALL SETMORN
+    CALL PRINT_STRING
+
+
     ;; years
-    GOTOXY 2, 22
+    GOTOXY 2, 23
     MOV AX, YEAR
     CALL PRINT_NUM
 
     ;; symbol
-    GOTOXY 8, 22
+    GOTOXY 8, 23
     mov dl,'/'
     mov ah,2
     int 21h
 
     ;; month
-    GOTOXY 14, 22
+    GOTOXY 14, 23
     MOV AX, MONTH
     CALL PRINT_NUM
 
     ;; symbol
-    GOTOXY 20, 22
+    GOTOXY 20, 23
     mov dl,'/'
     mov ah,2
     int 21h
 
 
     ;; day
-    GOTOXY 26, 22
+    GOTOXY 26, 23
     MOV AX, DAY
     CALL PRINT_NUM
 
@@ -157,8 +181,17 @@ ORG    100h
     ;; day of the week
 
     CALL SetWeeK
-    GOTOXY 2, 23
+    GOTOXY 2, 24
     CALL PRINT_STRING
+
+    GOTOXY 2, 24
+
+
+
+    GOTOXY 0, 21
+    LEA SI, Dsp
+    CALL PRINT_STRING
+
 
     ;; RET
 
@@ -171,10 +204,10 @@ usec:
 
 
     ;; seconds
-    GOTOXY 14, 20
+    GOTOXY 14, 21
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 14, 20
+    GOTOXY 14, 21
     MOV AX, SECOND
     CALL PRINT_NUM
 
@@ -222,10 +255,10 @@ umen:
     JE uhour
 
     ;; mintues
-    GOTOXY 8, 20
+    GOTOXY 8, 21
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 8, 20
+    GOTOXY 8, 21
     MOV AX, MINUTE
     CALL PRINT_NUM
 
@@ -236,10 +269,10 @@ uhour:
 
 
     ;; mintues
-    GOTOXY 8, 20
+    GOTOXY 8, 21
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 8, 20
+    GOTOXY 8, 21
     MOV MINUTE, 0
     MOV AX, MINUTE
     CALL PRINT_NUM
@@ -247,26 +280,43 @@ uhour:
 
     MOV MINUTE, 0
     ADD HOUR, 1
-    CMP HOUR, 24
+    CMP HOUR, 12
 
-    JE zhour
     JG zhour
     JMP hoursecond
 zhour:
-    MOV HOUR, 0
-    GOTOXY 2, 20
+    CMP AM, 1
+    JE zhourAM
+    MOV AM, 1
+    MOV HOUR, 1
+    GOTOXY 2, 21
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 2, 20
+    GOTOXY 2, 21
     MOV AX, HOUR
     CALL PRINT_NUM
     JMP uweek
-
-hoursecond:
-    GOTOXY 2, 20
+zhourAM:
+    MOV HOUR, 1
+    MOV AM, 0
+    GOTOXY 2, 21
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 2, 20
+    GOTOXY 2, 21
+    MOV AX, HOUR
+    CALL PRINT_NUM
+
+    GOTOXY 17, 21
+    CALL SETMORN
+    CALL PRINT_STRING
+
+    JMP usec
+
+hoursecond:
+    GOTOXY 2, 21
+    LEA SI, DASH
+    CALL PRINT_STRING
+    GOTOXY 2, 21
     MOV AX, HOUR
     CALL PRINT_NUM
     JMP usec
@@ -282,7 +332,7 @@ FIXWEEK:
 uday:
 
     CALL SetWeeK
-    GOTOXY 2, 23
+    GOTOXY 2, 24
     CALL PRINT_STRING
 
     ADD day,1
@@ -291,10 +341,10 @@ uday:
     JG umonth
 
 
-    GOTOXY 26, 22
+    GOTOXY 26, 23
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 26, 22
+    GOTOXY 26, 23
     MOV AX, DAY
     CALL PRINT_NUM
 
@@ -303,10 +353,10 @@ uday:
 umonth:
     MOV DAY, 1
 
-    GOTOXY 26, 22
+    GOTOXY 26, 23
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 26, 22
+    GOTOXY 26, 23
     MOV AX, DAY
     CALL PRINT_NUM
 
@@ -314,10 +364,10 @@ umonth:
     CMP MONTH, 13
     JE uyear
 
-    GOTOXY 14, 22
+    GOTOXY 14, 23
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 14, 22
+    GOTOXY 14, 23
     MOV AX, MONTH
     CALL PRINT_NUM
 
@@ -325,24 +375,38 @@ umonth:
 uyear:
     MOV MONTH, 1
 
-    GOTOXY 14, 22
+    GOTOXY 14, 23
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 14, 22
+    GOTOXY 14, 23
     MOV AX, MONTH
     CALL PRINT_NUM
 
     ADD YEAR, 1
 
-    GOTOXY 2, 22
+    GOTOXY 2, 23
     LEA SI, DASH
     CALL PRINT_STRING
-    GOTOXY 2, 22
+    GOTOXY 2, 23
     MOV AX, YEAR
     CALL PRINT_NUM
 
     JE usec
 
+
+    SetMORN     PROC
+    CMP AM, 1
+    JE SETAM
+    JMP SETPM
+SETAM:
+    LEA SI, AMT
+    JMP stopAM
+SETPM:
+    LEA SI, PMT
+    JMP stopAM
+stopAM:
+    RET
+    SetMORN     ENDP
 
     SetWeek     PROC
 
